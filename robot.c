@@ -100,12 +100,16 @@ void update (ROBOT* r, GRID* g) {
 	// Get obstacles
 	int i;
 	for (i = 0; i < 360; i++) {
-		float dx = (r->laser->point[i].px) * 4;
-		float dy = (r->laser->point[i].py) * 3;
+		float range = r->laser->scan[i][0];
+		float angle = r->laser->scan[i][1];
+		float ang_rot = angle + r->position2d->pa;
+		float diff_ok = atan2(sin(ang_rot), cos(ang_rot));
+
+		// TODO: use round function
 		int x1 = (WIDTH/2.f)/CELL_SIZE + r->position2d->px * 4;
 		int y1 = (HEIGHT/2.f)/CELL_SIZE - r->position2d->py * 3;
-		int x2 = (WIDTH/2.f)/CELL_SIZE + r->position2d->px * 4 + dx;
-		int y2 = (HEIGHT/2.f)/CELL_SIZE - r->position2d->py * 3 - dy;
+		int x2 = (WIDTH/2.f)/CELL_SIZE + r->position2d->px * 4 + range * cos(-diff_ok) * 4;
+		int y2 = (HEIGHT/2.f)/CELL_SIZE - r->position2d->py * 3 + range * sin(-diff_ok) * 3;
 		if (x2 > WIDTH) x2 = WIDTH-1;
 		if (y2 > HEIGHT) y2 = HEIGHT-1;
 		draw_line(g, x1, y1, x2, y2);
@@ -115,19 +119,24 @@ void update (ROBOT* r, GRID* g) {
 		
 	}
 
-	float dx = (r->laser->point[180].px);
-	float dy = (r->laser->point[180].py);
-	float range = r->laser->ranges[180];
-	int x2 = (WIDTH/2.f)/CELL_SIZE + r->position2d->px * 4 + dx;
-	int y2 = (HEIGHT/2.f)/CELL_SIZE - r->position2d->py * 3 - dy;
-
-	//DEBUG(range);
+	float dx = (r->laser->point[1].px);
+	float dy = (r->laser->point[1].py);
+	float range = r->laser->ranges[1];
+	int x1 = r->position2d->px;
+	int y1 = r->position2d->py;
+	int x2 = r->position2d->px + dx;
+	int y2 = r->position2d->py - dy;
 	
-	float ac_x2 = r->position2d->px + range * cos(-r->position2d->pa);
-	float ac_y2 = r->position2d->py - range * sin(-r->position2d->pa);
+	float ac_x2 = r->position2d->px + range * cos(r->position2d->pa);
+	float ac_y2 = r->position2d->py + range * sin(r->position2d->pa);
 
+	/*DEBUG((float)x1);
+	DEBUG((float)y1);
 	DEBUG(ac_x2);
-	DEBUG(ac_y2);
+	DEBUG(ac_y2);*/
+
+	//DEBUG((float)x2);
+	//DEBUG((float)y2);
 	
 	g->cells[(int)((WIDTH/2.f)/CELL_SIZE + r->position2d->px * 4)][(int)((HEIGHT/2.f)/CELL_SIZE - r->position2d->py * 3)] = 10;
 }
