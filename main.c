@@ -5,8 +5,8 @@
 #include <libplayerc/playerc.h>
 #include "robot.h"
 
-#define CELL_IS_FREE(value) (value <= 0)
-#define CELL_IS_OCCUPIED(value) (value >= 10)
+#define CELL_IS_FREE(value) (value <= 3)
+#define CELL_IS_OCCUPIED(value) (value >= 7)
 
 GRID* main_grid = 0;
 IplImage *image = 0;
@@ -119,4 +119,3 @@ int main () {
 	return 0;
 
 }
-

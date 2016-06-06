@@ -13,26 +13,31 @@ typedef struct matrix {
 	int cells[WIDTH/CELL_SIZE][HEIGHT/CELL_SIZE];
 } GRID;
 
+enum state {
+	LOOKING_FOR_DESTINY,
+	GOING_TO_DESTINY
+};
+
 typedef struct robot {
 	// State
 	int state;
-	
+
 	// 6665, 6666, 6667
 	int port;
-	
+
 	// Config
 	playerc_client_t* 		client;
 	playerc_position2d_t* 	position2d;
 	playerc_laser_t* 		laser;
 	playerc_blobfinder_t* 	bf;			// Camera
-	
+
 	// Properties
 	float dest_x, dest_y;	// Destination
 	float vlong, vrot;
 	float initial_x, initial_y;
-	
+
 	float max_speed;
-	
+
 } ROBOT;
 
 ROBOT* create_robot (int port);
@@ -64,16 +69,3 @@ void set_speed (ROBOT* r, float val);
 void draw_line (GRID* g, int x1, int y1, int x2, int y2);
 
 #endif
-
-
-
-
-
-
-
-
-
-
-
-
-

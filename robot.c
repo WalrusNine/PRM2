@@ -6,19 +6,19 @@ ROBOT* create_robot (int port) {
 	ROBOT* r = malloc(sizeof(ROBOT));
 
 	int full_port = port;
-	
+
 	r->client = playerc_client_create (NULL, "localhost", full_port);
 	if (playerc_client_connect(r->client) != 0) {
 		fprintf(stderr, "Error: %s\n", playerc_error_str());
 		free(r);
 		return NULL;
 	}
-	
+
 	r->port = full_port;				// Identify the robot
-	
-	
+
+
 	r->max_speed = 2.0f;
-	
+
 	r->vlong = 0;
 	r->vrot = 0;
 
@@ -40,7 +40,7 @@ ROBOT* create_robot (int port) {
 	robot_read(r);
 	robot_read(r);
 	robot_read(r);
-	
+
 	return r;
 }
 
@@ -55,21 +55,21 @@ int setup (ROBOT* r) {
 		// Activate
 		playerc_position2d_enable(r->position2d, 1);
 	}
-	
+
 	// Laser
 	r->laser = playerc_laser_create(r->client, 0);
 	if (playerc_laser_subscribe(r->laser, PLAYERC_OPEN_MODE)) {
 		fprintf(stderr, "Error: %s\n", playerc_error_str());
 		return 0;
 	}
-	
+
 	// Camera
 	r->bf = playerc_blobfinder_create(r->client, 0);
 	if (playerc_blobfinder_subscribe(r->bf, PLAYER_OPEN_MODE)) {
 		fprintf(stderr, "Error: %s\n", playerc_error_str());
 		return 0;
 	}
-	
+
 	return 1;
 }
 
@@ -78,11 +78,11 @@ void robot_read (ROBOT* r) {
 }
 
 void draw_line(GRID* g, int x0, int y0, int x1, int y1) {
- 
+
   int dx = abs(x1-x0), sx = x0<x1 ? 1 : -1;
-  int dy = abs(y1-y0), sy = y0<y1 ? 1 : -1; 
+  int dy = abs(y1-y0), sy = y0<y1 ? 1 : -1;
   int err = (dx>dy ? dx : -dy)/2, e2;
- 
+
   for(;;){
     g->cells[x0][y0] = 10;
     if (x0==x1 && y0==y1) break;
@@ -94,7 +94,7 @@ void draw_line(GRID* g, int x0, int y0, int x1, int y1) {
 
 /*
 ** Get robot's angle, set points accordingly
-** 
+**
 */
 void update (ROBOT* r, GRID* g) {
 	// Get obstacles
@@ -116,7 +116,7 @@ void update (ROBOT* r, GRID* g) {
 		if (distance(x1 / 4, y1 / 3, x2 / 4, y2 / 3) < 8) {
 				g->cells[x2][y2] = 0;
 		}
-		
+
 	}
 
 	float dx = (r->laser->point[1].px);
@@ -126,7 +126,7 @@ void update (ROBOT* r, GRID* g) {
 	int y1 = r->position2d->py;
 	int x2 = r->position2d->px + dx;
 	int y2 = r->position2d->py - dy;
-	
+
 	float ac_x2 = r->position2d->px + range * cos(r->position2d->pa);
 	float ac_y2 = r->position2d->py + range * sin(r->position2d->pa);
 
@@ -137,7 +137,7 @@ void update (ROBOT* r, GRID* g) {
 
 	//DEBUG((float)x2);
 	//DEBUG((float)y2);
-	
+
 	g->cells[(int)((WIDTH/2.f)/CELL_SIZE + r->position2d->px * 4)][(int)((HEIGHT/2.f)/CELL_SIZE - r->position2d->py * 3)] = 10;
 }
 
@@ -160,9 +160,9 @@ void set_speed (ROBOT* r, float val) {
 int go_to (ROBOT* r, float x, float y) {
 	r->dest_x = x;
 	r->dest_y = y;
-	
+
 	r->vlong = r->max_speed;
-	
+
 	//Calcula vel longitudinal
 	float dist = distance(r->position2d->px, r->position2d->py, x, y);
 	if (dist < 0.8) {
@@ -175,7 +175,7 @@ int go_to (ROBOT* r, float x, float y) {
 	float diff_ok = atan2(sin(ang_rot), cos(ang_rot));
 
 	//printf("AngRot: %f\n", ang_rot);
-	
+
 	r->vrot = diff_ok;
 
 	//Calcula força de repulsão
@@ -193,13 +193,13 @@ int go_to (ROBOT* r, float x, float y) {
 	}
 
 	r->vrot -= 0.5 * campo_obst;
-	
+
 	return 0;
 }
 
 float diff (float a, float b) {
 	float res = a - b;
-	
+
 	if (res < 0) return -res;
 	else return res;
 }
@@ -216,16 +216,23 @@ void delete_robot (ROBOT* r) {
 	// Disconnect
 	playerc_position2d_unsubscribe(r->position2d);
 	playerc_position2d_destroy(r->position2d);
-	
+
 	playerc_laser_unsubscribe(r->laser);
 	playerc_laser_destroy(r->laser);
-	
+
 	playerc_blobfinder_unsubscribe(r->bf);
 	playerc_blobfinder_destroy(r->bf);
-	
+
 	playerc_client_disconnect(r->client);
 	playerc_client_destroy(r->client);
-	
+
 	// Free memory
 	free(r);
+}
+
+void wander (ROBOT* r, GRID* g) {
+	// Look for unknow square in grid
+	// Do dfs/bfs algorithm to see if can go
+	// If now can, try to go
+	// If can't, repeat for next square
 }
