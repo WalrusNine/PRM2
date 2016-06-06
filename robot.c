@@ -2,6 +2,24 @@
 
 #include <math.h>
 
+POINT* go_to_pos;
+int go_to_pos_index = 0;
+
+GRID* walked_grid = 0;
+
+GRID* create_grid() {
+	GRID* m = malloc(sizeof(GRID));
+
+	int i, j;
+	for (i = 0; i < WIDTH/CELL_SIZE; ++i) {
+		for (j = 0; j < HEIGHT/CELL_SIZE; ++j) {
+			m->cells[i][j] = 5;
+		}
+	}
+
+	return m;
+}
+
 ROBOT* create_robot (int port) {
 	ROBOT* r = malloc(sizeof(ROBOT));
 
@@ -17,7 +35,7 @@ ROBOT* create_robot (int port) {
 	r->port = full_port;				// Identify the robot
 
 
-	r->max_speed = 2.0f;
+	r->max_speed = 0.5f;
 
 	r->vlong = 0;
 	r->vrot = 0;
@@ -40,6 +58,11 @@ ROBOT* create_robot (int port) {
 	robot_read(r);
 	robot_read(r);
 	robot_read(r);
+
+
+	// Create go_to_pos
+	go_to_pos = malloc(1000 * sizeof(POINT));
+	walked_grid = create_grid();
 
 	return r;
 }
@@ -84,7 +107,9 @@ void draw_line(GRID* g, int x0, int y0, int x1, int y1) {
   int err = (dx>dy ? dx : -dy)/2, e2;
 
   for(;;){
-    g->cells[x0][y0] = 10;
+    g->cells[x0][y0] += 1;
+	if (g->cells[x0][y0] > 10) g->cells[x0][y0] = 10;
+
     if (x0==x1 && y0==y1) break;
     e2 = err;
     if (e2 >-dx) { err -= dy; x0 += sx; }
@@ -98,6 +123,7 @@ void draw_line(GRID* g, int x0, int y0, int x1, int y1) {
 */
 void update (ROBOT* r, GRID* g) {
 	// Get obstacles
+	go_to_pos_index = 0;
 	int i;
 	for (i = 0; i < 360; i++) {
 		float range = r->laser->scan[i][0];
@@ -105,7 +131,6 @@ void update (ROBOT* r, GRID* g) {
 		float ang_rot = angle + r->position2d->pa;
 		float diff_ok = atan2(sin(ang_rot), cos(ang_rot));
 
-		// TODO: use round function
 		int x1 = (WIDTH/2.f)/CELL_SIZE + r->position2d->px * 4;
 		int y1 = (HEIGHT/2.f)/CELL_SIZE - r->position2d->py * 3;
 		int x2 = (WIDTH/2.f)/CELL_SIZE + r->position2d->px * 4 + range * cos(-diff_ok) * 4;
@@ -113,32 +138,56 @@ void update (ROBOT* r, GRID* g) {
 		if (x2 > WIDTH) x2 = WIDTH-1;
 		if (y2 > HEIGHT) y2 = HEIGHT-1;
 		draw_line(g, x1, y1, x2, y2);
-		if (distance(x1 / 4, y1 / 3, x2 / 4, y2 / 3) < 8) {
-				g->cells[x2][y2] = 0;
+
+		if (range < 8) {
+			g->cells[x2][y2] = 0;
+		}
+
+		if (range > go_to_pos[go_to_pos_index].range) {
+			// Add to list of to go squares
+			go_to_pos[go_to_pos_index].x = x2;
+			go_to_pos[go_to_pos_index].y = y2;
+			go_to_pos[go_to_pos_index].range = range;
 		}
 
 	}
 
-	float dx = (r->laser->point[1].px);
-	float dy = (r->laser->point[1].py);
-	float range = r->laser->ranges[1];
-	int x1 = r->position2d->px;
-	int y1 = r->position2d->py;
-	int x2 = r->position2d->px + dx;
-	int y2 = r->position2d->py - dy;
+	// Current position is empty
+	int cur_x = (int)((WIDTH/2.f)/CELL_SIZE + r->position2d->px * 4);
+	int cur_y = (int)((HEIGHT/2.f)/CELL_SIZE - r->position2d->py * 3);
+	g->cells[cur_x][cur_y] = 10;
 
-	float ac_x2 = r->position2d->px + range * cos(r->position2d->pa);
-	float ac_y2 = r->position2d->py + range * sin(r->position2d->pa);
+	// Go to a go_to_pos
+	// Get
+	/*int x = go_to_pos[go_to_pos_index].x;
+	int y = go_to_pos[go_to_pos_index].y;
+	if (go_to_pos[go_to_pos_index].range > 5 && walked_grid->cells[x][y] != 10) {
+		go_to(r, x, y);
+		// Add current position to walked_grid
+		walked_grid->cells[cur_x][cur_y] = 10;
+	}
+	else {
+		// No destiny, stop and turn until
+		set_speed(r, 0);
+		turn_left(r);
+	}*/
+	// Add current position to walked_grid
+	//walked_grid->cells[cur_x][cur_y] = 10;
 
-	/*DEBUG((float)x1);
-	DEBUG((float)y1);
-	DEBUG(ac_x2);
-	DEBUG(ac_y2);*/
+	POINT d = find_pos(main_grid);
+	if (d.x > -1) {
+		int x = (d.x - (WIDTH/2.f)/CELL_SIZE)/4;
+		int y = (-d.y + (HEIGHT/2.f)/CELL_SIZE)/3;
+		DEBUG((float)x);
+		DEBUG((float)y);
 
-	//DEBUG((float)x2);
-	//DEBUG((float)y2);
-
-	g->cells[(int)((WIDTH/2.f)/CELL_SIZE + r->position2d->px * 4)][(int)((HEIGHT/2.f)/CELL_SIZE - r->position2d->py * 3)] = 10;
+		go_to(r, x, y);
+	}
+	else {
+		// No destiny, stop and turn until
+		set_speed(r, 0);
+		turn_left(r);
+	}
 }
 
 void no_turn (ROBOT* r) {
@@ -209,7 +258,7 @@ float distance (float x1, float y1, float x2, float y2) {
 }
 
 void execute (ROBOT* r) {
-	//playerc_position2d_set_cmd_vel(r->position2d, r->vlong, 0, r->vrot, 1);
+	playerc_position2d_set_cmd_vel(r->position2d, r->vlong, 0, r->vrot, 1);
 }
 
 void delete_robot (ROBOT* r) {
@@ -235,4 +284,59 @@ void wander (ROBOT* r, GRID* g) {
 	// Do dfs/bfs algorithm to see if can go
 	// If now can, try to go
 	// If can't, repeat for next square
+}
+
+/*int round (float n) {
+
+}*/
+
+POINT find_pos (GRID* m) {
+	// Loop, if finds unknow, check surrounding, if is free go
+	int i, j, w, h, found;
+	w = WIDTH/CELL_SIZE;
+	h = HEIGHT/CELL_SIZE;
+	found = 0;
+
+	POINT p;
+	p.x = -1;
+	p.y = -1;
+
+	for (i = 0; i < w; ++i) {
+		for (j = 0; j < h; ++j) {
+			if (m->cells[i][j] > 3 && m->cells[i][j] < 7) {
+				// Check up, down, left and right
+				// UP
+				if (j-1 > 0 && m->cells[i][j-1]) {
+					// UP
+					if (m->cells[i][j-1] >= 7) {
+						found = 1;
+					}
+				}
+				else if (j+1 < h && m->cells[i][j+1]) {
+					// DOWN
+					if (m->cells[i][j+1] >= 7) {
+						found = 1;
+					}
+				}
+				else if (i-1 > 0 && m->cells[i-1][j]) {
+					// LEFT
+					if (m->cells[i-1][j] >= 7) {
+						found = 1;
+					}
+				}
+				else if (i+1 < w && m->cells[i+1][j]) {
+					// RIGHT
+					if (m->cells[i+1][j] >= 7) {
+						found = 1;
+					}
+				}
+			}
+
+			if (found) {
+				p.x = i;
+				p.y = j;
+				return p;
+			}
+		}
+	}
 }

@@ -5,10 +5,9 @@
 #include <libplayerc/playerc.h>
 #include "robot.h"
 
-#define CELL_IS_FREE(value) (value <= 3)
-#define CELL_IS_OCCUPIED(value) (value >= 7)
+#define CELL_IS_OCCUPIED(value) (value <= 3)
+#define CELL_IS_FREE(value) (value >= 7)
 
-GRID* main_grid = 0;
 IplImage *image = 0;
 
 void draw_point(int x, int y, unsigned char r, unsigned char g, unsigned char b) {
@@ -59,31 +58,22 @@ void clear_grid(GRID* g) {
 	}
 }
 
-GRID* create_grid() {
-	GRID* m = malloc(sizeof(GRID));
-
-	int i, j;
-	for (i = 0; i < WIDTH/CELL_SIZE; ++i) {
-		for (j = 0; j < HEIGHT/CELL_SIZE; ++j) {
-			m->cells[i][j] = 5;
-		}
-	}
-
-	return m;
-}
-
 void update_main_grid(GRID* g) {
 	// Put g on top of main
 	int i, j;
 	for (i = 0; i < WIDTH/CELL_SIZE; ++i) {
 		for (j = 0; j < HEIGHT/CELL_SIZE; ++j) {
-			if (CELL_IS_OCCUPIED(g->cells[i][j])) {
-				main_grid->cells[i][j] += 1;
-				if (main_grid->cells[i][j] > 10) main_grid->cells[i][j] = 10;
+			if (CELL_IS_OCCUPIED(main_grid->cells[i][j])) {
+				// Once occupied, always occupied
+				main_grid->cells[i][j] = 0;
 			}
-			else if (CELL_IS_FREE(g->cells[i][j])) {
+			else if (CELL_IS_OCCUPIED(g->cells[i][j])) {
 				main_grid->cells[i][j] -= 1;
 				if (main_grid->cells[i][j] < 0) main_grid->cells[i][j] = 0;
+			}
+			else if (CELL_IS_FREE(g->cells[i][j])) {
+				main_grid->cells[i][j] += 1;
+				if (main_grid->cells[i][j] > 10) main_grid->cells[i][j] = 10;
 			}
 		}
 	}

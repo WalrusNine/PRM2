@@ -13,10 +13,18 @@ typedef struct matrix {
 	int cells[WIDTH/CELL_SIZE][HEIGHT/CELL_SIZE];
 } GRID;
 
+GRID* main_grid;
+
 enum state {
 	LOOKING_FOR_DESTINY,
 	GOING_TO_DESTINY
 };
+
+typedef struct point {
+	int x;
+	int y;
+	float range;
+} POINT;
 
 typedef struct robot {
 	// State
@@ -39,6 +47,10 @@ typedef struct robot {
 	float max_speed;
 
 } ROBOT;
+
+GRID* create_grid();
+
+POINT find_pos (GRID* g);
 
 ROBOT* create_robot (int port);
 

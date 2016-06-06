@@ -1,0 +1,99 @@
+# mapa1.world - basic world file example
+# Authors: Richard Vaughan
+# $Id$
+
+include "pioneer.inc"
+include "map.inc"
+include "sick.inc"
+
+# time to pause (in GUI mode) or quit (in headless mode (-g)) the simulation
+quit_time 3600 # 1 hour of simulated time
+
+paused 0
+
+resolution 0.02
+
+# configure the GUI window
+window
+(
+  size [ 635.000 666.000 ] # in pixels
+  scale 37.481   # pixels per meter
+  center [ -0.019  -0.282 ]
+  rotate [ 0  0 ]
+  			
+  show_data 1              # 1=on 0=off
+)
+
+# load an environment bitmap
+floorplan
+( 
+  name "cave"
+  size [16.000 16.000 0.800]
+  pose [0 0 0 0]
+  bitmap "cave.png"
+)
+
+
+pioneer2dx
+(		  
+  # can refer to the robot by this name
+  name "r0"
+  pose [ -7 -7 0 0 ] 
+
+  sicklaser(   
+     # ctrl "lasernoise"  # uncomment this line to run a laser noise generator
+  )
+ 
+  # report error-free position in world coordinates
+  localization "gps"
+  localization_origin [ 0 0 0 0 ]
+
+  gripper (
+	pose [ 0.25 0.0 0.0 0.0 ]
+	size [0.2 0.3 0.0]
+	color "grey"
+	)
+
+  blobfinder ()
+  ranger()
+)
+
+pioneer2dx
+(		  
+  # can refer to the robot by this name
+  name "r1"
+  pose [ -7 5.5 0 0 ] 
+
+  color "blue"
+
+  sicklaser(   
+     # ctrl "lasernoise"  # uncomment this line to run a laser noise generator
+  )
+ 
+  # report error-free position in world coordinates
+  localization "gps"
+  localization_origin [ 0 0 0 0 ]
+
+  gripper (
+	pose [ 0.25 0.0 0.0 0.0 ]
+	size [0.2 0.3 0.0]
+	color "grey"
+	)
+
+  blobfinder ()
+  ranger()
+)
+
+
+define puck model(
+  size [ 0.080 0.080 0.300 ]
+  gripper_return 1
+  gui_move 1
+  gui_nose 0
+  fiducial_return 10
+  mass 0.0
+)
+
+puck( pose [2 -3 0 0 ] color "green" )
+puck( pose [1 -3 0 0 ] color "orange" )
+
