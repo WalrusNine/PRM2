@@ -105,7 +105,9 @@ int main () {
 	while (!cvWaitKey(0));
 
 	free(g);
+	free(main_grid);
+	delete_robot(robot);
+
 
 	return 0;
-
 }

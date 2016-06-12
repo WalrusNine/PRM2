@@ -2,10 +2,9 @@
 
 #include <math.h>
 
-POINT* go_to_pos;
-int go_to_pos_index = 0;
-
-GRID* walked_grid = 0;
+GRID* known_grid = 0;
+int cur_destination_count = 0;
+POINT cur_destination;
 
 GRID* create_grid() {
 	GRID* m = malloc(sizeof(GRID));
@@ -59,10 +58,10 @@ ROBOT* create_robot (int port) {
 	robot_read(r);
 	robot_read(r);
 
+	known_grid = create_grid();
 
-	// Create go_to_pos
-	go_to_pos = malloc(1000 * sizeof(POINT));
-	walked_grid = create_grid();
+	cur_destination.x = -1;
+	cur_destination.y = -1;
 
 	return r;
 }
@@ -101,14 +100,16 @@ void robot_read (ROBOT* r) {
 }
 
 void draw_line(GRID* g, int x0, int y0, int x1, int y1) {
-
   int dx = abs(x1-x0), sx = x0<x1 ? 1 : -1;
   int dy = abs(y1-y0), sy = y0<y1 ? 1 : -1;
   int err = (dx>dy ? dx : -dy)/2, e2;
 
   for(;;){
     g->cells[x0][y0] += 1;
-	if (g->cells[x0][y0] > 10) g->cells[x0][y0] = 10;
+	if (g->cells[x0][y0] > 10) {
+		g->cells[x0][y0] = 10;
+		known_grid->cells[x0][y0] = 10;
+	}
 
     if (x0==x1 && y0==y1) break;
     e2 = err;
@@ -122,9 +123,9 @@ void draw_line(GRID* g, int x0, int y0, int x1, int y1) {
 **
 */
 void update (ROBOT* r, GRID* g) {
-	// Get obstacles
-	go_to_pos_index = 0;
+	// Check laser / update grid
 	int i;
+	float front = 8;
 	for (i = 0; i < 360; i++) {
 		float range = r->laser->scan[i][0];
 		float angle = r->laser->scan[i][1];
@@ -135,19 +136,22 @@ void update (ROBOT* r, GRID* g) {
 		int y1 = (HEIGHT/2.f)/CELL_SIZE - r->position2d->py * 3;
 		int x2 = (WIDTH/2.f)/CELL_SIZE + r->position2d->px * 4 + range * cos(-diff_ok) * 4;
 		int y2 = (HEIGHT/2.f)/CELL_SIZE - r->position2d->py * 3 + range * sin(-diff_ok) * 3;
-		if (x2 > WIDTH) x2 = WIDTH-1;
-		if (y2 > HEIGHT) y2 = HEIGHT-1;
+		if (x2 >= WIDTH/CELL_SIZE) {
+			x2 = (WIDTH/CELL_SIZE) - 1;
+		}
+		if (y2 >= HEIGHT/CELL_SIZE) {
+			y2 = (HEIGHT/CELL_SIZE) - 1;
+		}
+
+		if (i > 150 && i < 210) {
+			if (front > range) front = range;
+		}
+
 		draw_line(g, x1, y1, x2, y2);
 
 		if (range < 8) {
 			g->cells[x2][y2] = 0;
-		}
-
-		if (range > go_to_pos[go_to_pos_index].range) {
-			// Add to list of to go squares
-			go_to_pos[go_to_pos_index].x = x2;
-			go_to_pos[go_to_pos_index].y = y2;
-			go_to_pos[go_to_pos_index].range = range;
+			known_grid->cells[x2][y2] = 10;
 		}
 
 	}
@@ -157,34 +161,32 @@ void update (ROBOT* r, GRID* g) {
 	int cur_y = (int)((HEIGHT/2.f)/CELL_SIZE - r->position2d->py * 3);
 	g->cells[cur_x][cur_y] = 10;
 
-	// Go to a go_to_pos
-	// Get
-	/*int x = go_to_pos[go_to_pos_index].x;
-	int y = go_to_pos[go_to_pos_index].y;
-	if (go_to_pos[go_to_pos_index].range > 5 && walked_grid->cells[x][y] != 10) {
-		go_to(r, x, y);
-		// Add current position to walked_grid
-		walked_grid->cells[cur_x][cur_y] = 10;
+	// Find pos to go
+	POINT d = find_pos(main_grid);
+	// If is already going there
+	if (d.x == cur_destination.x && d.y == cur_destination.y) {
+		// Add to count
+		cur_destination_count++;
+		// If has been trying to go there for too long, give up
+		if (cur_destination_count > 200) {
+			known_grid->cells[d.x][d.y] = 10;
+		}
 	}
 	else {
-		// No destiny, stop and turn until
-		set_speed(r, 0);
-		turn_left(r);
-	}*/
-	// Add current position to walked_grid
-	//walked_grid->cells[cur_x][cur_y] = 10;
+		// If is new destination, set it and its count
+		cur_destination_count = 0;
+		cur_destination = d;
+	}
 
-	POINT d = find_pos(main_grid);
-	if (d.x > -1) {
+	// If found a point and there's nothing in front
+	if (d.x > -1 && front > 1) {
 		int x = (d.x - (WIDTH/2.f)/CELL_SIZE)/4;
 		int y = (-d.y + (HEIGHT/2.f)/CELL_SIZE)/3;
-		DEBUG((float)x);
-		DEBUG((float)y);
 
 		go_to(r, x, y);
 	}
 	else {
-		// No destiny, stop and turn until
+		// No good destiny, stop and turn until finds new destiny
 		set_speed(r, 0);
 		turn_left(r);
 	}
@@ -222,8 +224,6 @@ int go_to (ROBOT* r, float x, float y) {
 	float angdest = atan2(y - r->position2d->py, x - r->position2d->px);
 	float ang_rot = angdest - r->position2d->pa;
 	float diff_ok = atan2(sin(ang_rot), cos(ang_rot));
-
-	//printf("AngRot: %f\n", ang_rot);
 
 	r->vrot = diff_ok;
 
@@ -277,21 +277,18 @@ void delete_robot (ROBOT* r) {
 
 	// Free memory
 	free(r);
+
+	free(known_grid);
 }
 
-void wander (ROBOT* r, GRID* g) {
-	// Look for unknow square in grid
-	// Do dfs/bfs algorithm to see if can go
-	// If now can, try to go
-	// If can't, repeat for next square
-}
-
-/*int round (float n) {
-
-}*/
-
+/*
+** Check grid
+** If finds an unknown position, check if surroundings
+** (up, left, right and down) are free
+** If is, assume robot can go to it, unless
+** it's a known position already (set by known_grid).
+*/
 POINT find_pos (GRID* m) {
-	// Loop, if finds unknow, check surrounding, if is free go
 	int i, j, w, h, found;
 	w = WIDTH/CELL_SIZE;
 	h = HEIGHT/CELL_SIZE;
@@ -332,11 +329,16 @@ POINT find_pos (GRID* m) {
 				}
 			}
 
-			if (found) {
+			if (found && known_grid->cells[i][j] != 10) {
 				p.x = i;
 				p.y = j;
 				return p;
 			}
+			else {
+				found = 0;
+			}
 		}
 	}
+
+	return p;
 }
