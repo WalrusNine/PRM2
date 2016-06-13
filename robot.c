@@ -4,7 +4,6 @@
 
 GRID* known_grid = 0;
 int cur_destination_count = 0;
-POINT cur_destination;
 
 GRID* create_grid() {
 	GRID* m = malloc(sizeof(GRID));

@@ -36,6 +36,10 @@ void refresh_grid(GRID* g) {
 				int color = g->cells[i / CELL_SIZE][j / CELL_SIZE] * 25.5f;
 				draw_point(i, j, color, color, color);
 			}
+
+			if (cur_destination.x == i / CELL_SIZE && cur_destination.y == j / CELL_SIZE) {
+				draw_point(i, j, 0, 255, 0);
+			}
 		}
 	}
 }

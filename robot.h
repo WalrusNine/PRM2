@@ -26,6 +26,8 @@ typedef struct point {
 	float range;
 } POINT;
 
+POINT cur_destination;
+
 typedef struct robot {
 	// State
 	int state;
