@@ -15,26 +15,14 @@ typedef struct matrix {
 
 GRID* main_grid;
 
-enum state {
-	LOOKING_FOR_DESTINY,
-	GOING_TO_DESTINY
-};
-
 typedef struct point {
 	int x;
 	int y;
-	float range;
 } POINT;
 
 POINT cur_destination;
 
 typedef struct robot {
-	// State
-	int state;
-
-	// 6665, 6666, 6667
-	int port;
-
 	// Config
 	playerc_client_t* 		client;
 	playerc_position2d_t* 	position2d;
@@ -44,7 +32,6 @@ typedef struct robot {
 	// Properties
 	float dest_x, dest_y;	// Destination
 	float vlong, vrot;
-	float initial_x, initial_y;
 
 	float max_speed;
 

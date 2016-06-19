@@ -21,34 +21,17 @@ GRID* create_grid() {
 ROBOT* create_robot (int port) {
 	ROBOT* r = malloc(sizeof(ROBOT));
 
-	int full_port = port;
-
-	r->client = playerc_client_create (NULL, "localhost", full_port);
+	r->client = playerc_client_create (NULL, "localhost", port);
 	if (playerc_client_connect(r->client) != 0) {
 		fprintf(stderr, "Error: %s\n", playerc_error_str());
 		free(r);
 		return NULL;
 	}
 
-	r->port = full_port;				// Identify the robot
-
-
 	r->max_speed = 0.5f;
 
 	r->vlong = 0;
 	r->vrot = 0;
-
-	// Setup initial pos
-	r->initial_x = 0;
-	if (port == 5) {
-		r->initial_y = -1;
-	}
-	else if (port == 6) {
-		r->initial_y = 0;
-	}
-	else if (port == 7) {
-		r->initial_y = 1;
-	}
 
 	setup(r);
 
